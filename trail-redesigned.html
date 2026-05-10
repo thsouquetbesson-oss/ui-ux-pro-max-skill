@@ -2662,6 +2662,10 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
 @keyframes cineTaglineReveal{
   to{opacity:1;transform:translateY(0);}
 }
+@keyframes cineScrollHintReveal{
+  from{opacity:0;transform:translateX(-50%) translateY(8px);}
+  to  {opacity:1;transform:translateX(-50%) translateY(0);}
+}
 
 /* Bienvenue overline */
 .cine-overline{
@@ -2688,7 +2692,7 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   letter-spacing:.35em;text-transform:uppercase;
   color:rgba(234,230,218,.55);
   opacity:0;
-  animation:cineTaglineReveal .8s ease-out forwards;
+  animation:cineScrollHintReveal .8s ease-out forwards;
   animation-delay:2.3s;
 }
 .cine-scroll-hint svg{
