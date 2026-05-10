@@ -1865,51 +1865,20 @@ mark.highlight{
 }
 .itin-stat-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 
-.itin-3d-wrap, .itin-profile{
+.itin-map-wrap, .itin-profile{
   background:linear-gradient(180deg,rgba(28,45,36,.55),rgba(21,34,27,.4));
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border:1px solid var(--border);border-radius:18px;
   padding:18px;margin-bottom:18px;
   box-shadow:var(--shadow-md);
 }
-.itin-3d-header,.itin-profile-header{
+.itin-profile-header{
   display:flex;justify-content:space-between;align-items:center;
   margin-bottom:14px;
 }
-.itin-3d-title,.itin-profile-title{
+.itin-profile-title{
   font-family:'Fraunces',serif;font-weight:500;font-size:1.05rem;
 }
-.itin-3d-toggle{
-  background:linear-gradient(135deg,var(--gold) 0%,#a87b3a 100%);
-  border:none;color:#15221b;font-weight:600;font-size:.78rem;
-  padding:7px 14px;border-radius:99px;cursor:pointer;
-  font-family:inherit;letter-spacing:.04em;
-  transition:transform .25s var(--ease-spring),box-shadow .25s;
-  box-shadow:0 2px 12px rgba(212,165,107,.3);
-}
-.itin-3d-toggle:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(212,165,107,.45);}
-.itin-3d-toggle.active{
-  background:linear-gradient(135deg,var(--moss) 0%,var(--moss-deep) 100%);
-  color:#fff;box-shadow:0 2px 12px var(--moss-glow);
-}
-.itin-3d-canvas-wrap{
-  position:relative;width:100%;height:300px;
-  border-radius:14px;overflow:hidden;
-  background:linear-gradient(180deg,#0d1612 0%,#070C09 100%);
-  border:1px solid rgba(255,255,255,.05);
-}
-.itin-3d-placeholder{
-  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:24px;text-align:center;gap:12px;
-}
-.itin-3d-placeholder svg{width:80%;max-width:240px;height:auto;}
-.itin-3d-placeholder p{color:var(--muted);font-size:.85rem;line-height:1.5;}
-.itin-3d-loading{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  color:var(--gold);font-size:.9rem;letter-spacing:.05em;
-  background:rgba(7,12,9,.85);backdrop-filter:blur(8px);z-index:5;
-}
-#itin-3d-canvas{display:block;width:100%;height:100%;}
 
 .itin-profile-range{
   font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
@@ -1973,7 +1942,6 @@ mark.highlight{
 
 @media (max-width:480px){
   .itin-stats,.itin-stats-grid{grid-template-columns:repeat(2,1fr);gap:14px;}
-  .itin-3d-canvas-wrap{height:240px;}
 }
 
 /* ============================================================
@@ -3758,26 +3726,8 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       </div>
     </div>
 
-    <!-- 3D scene container -->
-    <div class="itin-3d-wrap reveal" data-glow>
-      <div class="itin-3d-header">
-        <div class="itin-3d-title">Vue 3D du parcours</div>
-        <button class="itin-3d-toggle" type="button" id="itin-3d-toggle" onclick="toggle3DView()" aria-label="Basculer vue 3D">
-          <span id="itin-3d-toggle-text">Activer la 3D</span>
-        </button>
-      </div>
-      <div class="itin-3d-canvas-wrap" id="itin-3d-canvas-wrap">
-        <div class="itin-3d-loading" id="itin-3d-loading" hidden>Chargement 3D…</div>
-        <div class="itin-3d-placeholder" id="itin-3d-placeholder">
-          <svg viewBox="0 0 200 100" fill="none">
-            <path d="M0 80 L40 50 L70 70 L110 30 L150 60 L200 40 L200 100 L0 100 Z" fill="rgba(141,216,168,.1)" stroke="rgba(141,216,168,.4)" stroke-width="1"/>
-            <path d="M40 50 L70 70 L110 30 L150 60 L200 40" fill="none" stroke="#E0B97D" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 3"/>
-          </svg>
-          <p>Active la vue 3D pour explorer ton parcours en relief.</p>
-        </div>
-        <canvas id="itin-3d-canvas" hidden></canvas>
-      </div>
-    </div>
+    <!-- 3D map container (Mapbox GL JS — wired in Phase C) -->
+    <div class="itin-map-wrap reveal" data-glow id="itin-map-wrap" hidden></div>
 
     <!-- Profil altitude SVG -->
     <div class="itin-profile reveal" data-glow>
@@ -4333,7 +4283,7 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   // ===================================================================
   // DATA STRUCTURES — future tabs
   // ===================================================================
-  // Itinéraire: tableau de waypoints géolocalisés (réservé Three.js + low-poly)
+  // Itinéraire: tableau de waypoints géolocalisés (rendu Mapbox GL JS 3D)
   // waypoints = [{ lat: Number, lng: Number, alt: Number, label: String, day: Number, etape: String }]
 
   // Budget: prévisionnel vs réel par catégorie (réservé graph)
@@ -5888,12 +5838,11 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // ITINÉRAIRE — waypoints, profil altitude, vue 3D Three.js (lazy)
+  // ITINÉRAIRE — waypoints, profil altitude, carte 3D Mapbox (Phase C wires this)
   // ═══════════════════════════════════════════════════════════════════
   const ITIN_KEY = "trail-itineraire-data";
   let itinData = null; // lazy-loaded on first tab activation
   let editingWaypointId = null;
-  let three3DState = { active: false, loaded: false, instance: null };
 
   function loadItin() {
     try {
@@ -5943,10 +5892,6 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
 
     renderAltitudeProfile(s.ordered);
     renderWaypointsList(s.ordered);
-
-    if (three3DState.active && three3DState.instance) {
-      three3DState.instance.update(s.ordered);
-    }
   }
 
   function renderAltitudeProfile(wps) {
@@ -6085,198 +6030,6 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   window.closeWaypointModal = closeWaypointModal;
   window.saveWaypointModal = saveWaypointModal;
   window.deleteWaypoint = deleteWaypoint;
-
-  // ─── Three.js lazy-loader + scene ──────────────────────────────────
-  function loadThreeJS() {
-    if (three3DState.loaded) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
-      s.onload = () => { three3DState.loaded = true; resolve(); };
-      s.onerror = () => reject(new Error("Three.js failed to load"));
-      document.head.appendChild(s);
-    });
-  }
-
-  async function toggle3DView() {
-    const btn = document.getElementById("itin-3d-toggle");
-    const text = document.getElementById("itin-3d-toggle-text");
-    const placeholder = document.getElementById("itin-3d-placeholder");
-    const canvas = document.getElementById("itin-3d-canvas");
-    const loading = document.getElementById("itin-3d-loading");
-
-    if (three3DState.active) {
-      three3DState.active = false;
-      btn.classList.remove("active");
-      text.textContent = "Activer la 3D";
-      placeholder.hidden = false;
-      canvas.hidden = true;
-      if (three3DState.instance) three3DState.instance.stop();
-      return;
-    }
-    placeholder.hidden = true;
-    loading.hidden = false;
-    canvas.hidden = false;
-    try {
-      await loadThreeJS();
-      const s = computeItinStats();
-      three3DState.instance = build3DScene(canvas, s.ordered);
-      three3DState.active = true;
-      btn.classList.add("active");
-      text.textContent = "Désactiver";
-    } catch (e) {
-      placeholder.innerHTML = '<p style="color:#e57373;">Impossible de charger la 3D (pas de réseau ?). Réessaie plus tard.</p>';
-      placeholder.hidden = false;
-      canvas.hidden = true;
-    } finally {
-      loading.hidden = true;
-    }
-  }
-  window.toggle3DView = toggle3DView;
-
-  function build3DScene(canvas, waypoints) {
-    const THREE = window.THREE;
-    const wrap = canvas.parentElement;
-    const W = wrap.clientWidth;
-    const H = wrap.clientHeight;
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setSize(W, H);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x0d1612, 1);
-
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x0d1612, 30, 90);
-
-    const camera = new THREE.PerspectiveCamera(55, W/H, 0.1, 200);
-    camera.position.set(20, 18, 30);
-    camera.lookAt(0, 0, 0);
-
-    // Low-poly terrain
-    const terrainGeo = new THREE.PlaneGeometry(80, 60, 32, 24);
-    const positions = terrainGeo.attributes.position;
-    for (let i = 0; i < positions.count; i++) {
-      const x = positions.getX(i);
-      const y = positions.getY(i);
-      const z = (Math.sin(x * 0.18) + Math.cos(y * 0.21) * 0.7
-              + Math.sin(x * 0.42 + y * 0.32) * 0.5) * 1.6
-              - (Math.abs(x) < 6 && Math.abs(y) < 6 ? 1.2 : 0);
-      positions.setZ(i, z);
-    }
-    terrainGeo.computeVertexNormals();
-    const terrainMat = new THREE.MeshStandardMaterial({
-      color: 0x2d5240, flatShading: true, roughness: 0.95, metalness: 0
-    });
-    const terrain = new THREE.Mesh(terrainGeo, terrainMat);
-    terrain.rotation.x = -Math.PI / 2;
-    scene.add(terrain);
-
-    // Lighting
-    const ambient = new THREE.AmbientLight(0xb8d4c2, 0.5);
-    scene.add(ambient);
-    const sun = new THREE.DirectionalLight(0xf4ddb0, 1.1);
-    sun.position.set(20, 30, 15);
-    scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x4f8aae, 0.4);
-    fill.position.set(-15, 10, -10);
-    scene.add(fill);
-
-    // Map waypoints to 3D positions (normalized to terrain)
-    function projectWaypoints(wps) {
-      if (wps.length === 0) return [];
-      const lats = wps.map(w => Number(w.lat) || 0);
-      const lngs = wps.map(w => Number(w.lng) || 0);
-      const alts = wps.map(w => Number(w.alt) || 0);
-      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-      const minAlt = Math.min(...alts, 0), maxAlt = Math.max(...alts, minAlt + 100);
-      const useGeo = (maxLat - minLat > 0.0001) || (maxLng - minLng > 0.0001);
-      return wps.map((w, i) => {
-        let x, z;
-        if (useGeo) {
-          const lat = Number(w.lat) || (minLat + maxLat)/2;
-          const lng = Number(w.lng) || (minLng + maxLng)/2;
-          x = ((lng - minLng) / Math.max(maxLng - minLng, 0.0001) - 0.5) * 30;
-          z = -((lat - minLat) / Math.max(maxLat - minLat, 0.0001) - 0.5) * 22;
-        } else {
-          // Layout linéaire sur l'axe X si pas de géoloc
-          x = wps.length === 1 ? 0 : ((i / (wps.length - 1)) - 0.5) * 30;
-          z = Math.sin(i * 0.7) * 5;
-        }
-        const altNorm = (Number(w.alt) || 0 - minAlt) / Math.max(maxAlt - minAlt, 1);
-        const y = 1 + altNorm * 6;
-        return { x, y, z };
-      });
-    }
-
-    const routeGroup = new THREE.Group();
-    scene.add(routeGroup);
-
-    function buildRoute(wps) {
-      // clear previous
-      while (routeGroup.children.length) {
-        const c = routeGroup.children.pop();
-        c.geometry?.dispose();
-        c.material?.dispose();
-      }
-      const pts = projectWaypoints(wps);
-      if (pts.length === 0) return;
-
-      // Route line
-      if (pts.length > 1) {
-        const lineGeo = new THREE.BufferGeometry().setFromPoints(
-          pts.map(p => new THREE.Vector3(p.x, p.y, p.z))
-        );
-        const lineMat = new THREE.LineBasicMaterial({ color: 0xE0B97D, linewidth: 3 });
-        routeGroup.add(new THREE.Line(lineGeo, lineMat));
-      }
-      // Waypoint markers
-      const markerGeo = new THREE.SphereGeometry(0.55, 12, 12);
-      pts.forEach((p, i) => {
-        const m = new THREE.Mesh(
-          markerGeo,
-          new THREE.MeshStandardMaterial({ color: i === 0 ? 0x8DD8A8 : (i === pts.length-1 ? 0xE57373 : 0xE0B97D), emissive: 0x000000 })
-        );
-        m.position.set(p.x, p.y, p.z);
-        routeGroup.add(m);
-      });
-    }
-    buildRoute(waypoints);
-
-    // Animation loop
-    let raf, t0 = Date.now(), running = true;
-    function animate() {
-      if (!running) return;
-      raf = requestAnimationFrame(animate);
-      const t = (Date.now() - t0) / 1000;
-      camera.position.x = Math.sin(t * 0.18) * 28;
-      camera.position.z = Math.cos(t * 0.18) * 28;
-      camera.position.y = 14 + Math.sin(t * 0.3) * 1.5;
-      camera.lookAt(0, 2, 0);
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    // Resize handler
-    function onResize() {
-      const w = wrap.clientWidth, h = wrap.clientHeight;
-      renderer.setSize(w, h);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    }
-    window.addEventListener("resize", onResize);
-
-    return {
-      update(wps) { buildRoute(wps); },
-      stop() {
-        running = false;
-        cancelAnimationFrame(raf);
-        window.removeEventListener("resize", onResize);
-        renderer.dispose();
-        terrainGeo.dispose();
-        terrainMat.dispose();
-      }
-    };
-  }
 
   // ═══════════════════════════════════════════════════════════════════
   // BUDGET — prévisionnel par catégorie + transactions réelles
