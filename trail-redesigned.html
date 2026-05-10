@@ -2239,9 +2239,571 @@ footer .dot{
   body::before{transform:none!important;}
   .header-mountain{transform:translateX(-50%)!important;}
 }
+
+/* ============================================================
+   PHASE 1 — CINEMATIC INTRO
+   Overlay full-screen scrollable. Plays once (localStorage
+   "trail-intro-seen"). Skip button always visible.
+   ============================================================ */
+#cinematic-intro{
+  position:fixed;inset:0;z-index:9999;
+  background:radial-gradient(ellipse at 50% 90%, #0E1A14 0%, #050907 70%);
+  overflow-y:auto;overflow-x:hidden;
+  scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+  color:#EAE6DA;
+  font-family:'Fraunces',serif;
+  --mx:50%;--my:50%;--px:0;--py:0;
+}
+#cinematic-intro.exit{
+  opacity:0;transition:opacity .6s cubic-bezier(.4,0,.2,1);pointer-events:none;
+}
+body.intro-locked,html.intro-locked{overflow:hidden!important;height:100%;}
+html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
+
+/* Skip button — 44×44 a11y compliant */
+.cine-skip{
+  position:fixed;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));
+  z-index:10001;
+  min-width:64px;min-height:44px;padding:10px 18px;
+  background:rgba(15,22,18,.55);
+  border:1px solid rgba(212,165,107,.35);
+  border-radius:999px;
+  color:#E0B97D;
+  font:500 13px/1 'Inter',sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  cursor:pointer;
+  transition:transform .25s ease,background .25s ease,border-color .25s ease;
+}
+.cine-skip:hover,.cine-skip:focus-visible{
+  background:rgba(212,165,107,.18);
+  border-color:rgba(212,165,107,.7);
+  transform:translateY(-1px);
+  outline:none;
+}
+.cine-skip:focus-visible{box-shadow:0 0 0 3px rgba(212,165,107,.35);}
+
+/* ─── ÉCRAN 1 : Cinematic landing ─────────────────── */
+.cine-landing{
+  position:relative;
+  height:100vh;height:100svh;
+  min-height:560px;
+  overflow:hidden;
+  isolation:isolate;
+  pointer-events:none; /* purely decorative — skip button overrides */
+}
+.cine-landing > *{pointer-events:none;}
+
+/* Sky gradient deep + warm horizon */
+.cine-sky{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 78%, #2B2515 0%, transparent 55%),
+    radial-gradient(ellipse 120% 80% at 50% 95%, #4A3920 0%, transparent 60%),
+    linear-gradient(180deg, #050907 0%, #0B130E 35%, #15221B 65%, #2A2418 100%);
+  z-index:1;
+}
+
+/* Rising sun halo — pulsing */
+.cine-sun{
+  position:absolute;left:50%;top:62%;
+  width:min(70vw,520px);aspect-ratio:1;
+  background:
+    radial-gradient(circle, rgba(255,210,140,.55) 0%, rgba(232,180,108,.28) 22%, rgba(212,165,107,.08) 50%, transparent 75%);
+  transform:translate(-50%,-50%) translate3d(calc(var(--px)*-8px),calc(var(--py)*-4px),0);
+  filter:blur(2px);
+  z-index:2;
+  animation:cineSunPulse 6s ease-in-out infinite;
+  will-change:opacity,transform;
+}
+@keyframes cineSunPulse{
+  0%,100%{opacity:.85;filter:blur(2px);}
+  50%{opacity:1;filter:blur(0);}
+}
+
+/* Mist layers — drifting horizontally */
+.cine-mist{
+  position:absolute;left:-25%;right:-25%;
+  height:38%;
+  pointer-events:none;
+  z-index:5;
+  background:linear-gradient(90deg,
+    transparent 0%,
+    rgba(180,200,180,.06) 18%,
+    rgba(200,210,190,.14) 38%,
+    rgba(180,200,180,.08) 58%,
+    rgba(200,210,190,.12) 78%,
+    transparent 100%);
+  filter:blur(20px);
+  will-change:transform;
+}
+.cine-mist-back{
+  bottom:32%;
+  animation:cineMistDrift 38s linear infinite;
+  opacity:.8;
+}
+.cine-mist-front{
+  bottom:12%;
+  height:30%;
+  animation:cineMistDrift 24s linear infinite reverse;
+  opacity:.55;
+}
+@keyframes cineMistDrift{
+  from{transform:translate3d(-12%,0,0);}
+  to{transform:translate3d(12%,0,0);}
+}
+
+/* Mountain parallax — 4 SVG silhouettes */
+.cine-mtn{
+  position:absolute;left:0;right:0;bottom:0;width:100%;
+  pointer-events:none;
+  display:block;
+  will-change:transform;
+}
+.cine-mtn-4{height:55%;z-index:3;opacity:.55;
+  transform:translate3d(calc(var(--px)*-6px),calc(var(--py)*-2px),0);}
+.cine-mtn-3{height:48%;z-index:4;opacity:.78;
+  transform:translate3d(calc(var(--px)*-12px),calc(var(--py)*-3px),0);}
+.cine-mtn-2{height:42%;z-index:6;opacity:.92;
+  transform:translate3d(calc(var(--px)*-22px),calc(var(--py)*-5px),0);}
+.cine-mtn-1{height:36%;z-index:7;opacity:1;
+  transform:translate3d(calc(var(--px)*-32px),calc(var(--py)*-8px),0);}
+
+/* Particle canvas */
+.cine-particles{
+  position:absolute;inset:0;width:100%;height:100%;
+  z-index:8;
+  pointer-events:none;
+  mix-blend-mode:screen;
+  opacity:.85;
+}
+
+/* Hero (logo + tagline) */
+.cine-hero{
+  position:absolute;left:50%;top:38%;
+  transform:translate3d(-50%,-50%,0) translate3d(calc(var(--px)*-3px),calc(var(--py)*-2px),0);
+  z-index:9;
+  text-align:center;
+  width:min(90vw,720px);
+}
+.cine-logo{
+  display:flex;justify-content:center;gap:.04em;
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:clamp(56px,12vw,140px);
+  letter-spacing:.18em;
+  font-variation-settings:'opsz' 144,'SOFT' 30,'WONK' 1;
+  line-height:1;
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.06))
+         drop-shadow(0 -1px 0 rgba(0,0,0,.65))
+         drop-shadow(0 8px 24px rgba(212,165,107,.25));
+}
+.cine-logo span{
+  display:inline-block;
+  background:linear-gradient(180deg,#F4DDB0 0%,#D4A56B 50%,#8A6230 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+  opacity:0;
+  transform:translateY(.18em) scale(.94);
+  filter:blur(8px);
+  animation:cineLetterCarve .9s cubic-bezier(.2,.8,.2,1) forwards;
+  animation-delay:calc(.55s + var(--i) * .12s);
+}
+@keyframes cineLetterCarve{
+  0%{opacity:0;transform:translateY(.18em) scale(.94);filter:blur(8px);}
+  60%{opacity:1;filter:blur(0);}
+  100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}
+}
+.cine-tagline{
+  margin:24px 0 0;
+  font-family:'Instrument Serif','Fraunces',serif;
+  font-weight:400;
+  font-size:clamp(20px,4.6vw,32px);
+  color:#EAE6DA;
+  letter-spacing:.01em;
+  opacity:0;
+  transform:translateY(8px);
+  animation:cineTaglineReveal 1s cubic-bezier(.2,.8,.2,1) forwards;
+  animation-delay:1.5s;
+}
+.cine-tagline em{
+  font-style:italic;
+  color:#E0B97D;
+}
+@keyframes cineTaglineReveal{
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* Bienvenue overline */
+.cine-overline{
+  display:inline-flex;align-items:center;gap:14px;
+  font:500 11px/1 'Inter',sans-serif;
+  letter-spacing:.42em;text-transform:uppercase;
+  color:rgba(212,165,107,.85);
+  margin-bottom:18px;
+  opacity:0;
+  animation:cineTaglineReveal .9s ease-out forwards;
+  animation-delay:.25s;
+}
+.cine-overline::before,.cine-overline::after{
+  content:"";width:24px;height:1px;background:rgba(212,165,107,.55);
+}
+
+/* Scroll hint */
+.cine-scroll-hint{
+  position:absolute;left:50%;bottom:max(28px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:9;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  font:500 10px/1 'Inter',sans-serif;
+  letter-spacing:.35em;text-transform:uppercase;
+  color:rgba(234,230,218,.55);
+  opacity:0;
+  animation:cineTaglineReveal .8s ease-out forwards;
+  animation-delay:2.3s;
+}
+.cine-scroll-hint svg{
+  width:18px;height:18px;stroke:#E0B97D;stroke-width:2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;
+  animation:cineChevronPulse 2.2s ease-in-out infinite;
+  animation-delay:2.6s;
+}
+@keyframes cineChevronPulse{
+  0%,100%{transform:translateY(0);opacity:.6;}
+  50%{transform:translateY(6px);opacity:1;}
+}
+
+/* Mobile tap glow (replaces mouse spotlight) */
+.cine-tap-glow{
+  position:fixed;left:0;top:0;width:280px;height:280px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(232,180,108,.35) 0%, transparent 65%);
+  pointer-events:none;
+  transform:translate(-50%,-50%) scale(0);
+  z-index:10000;
+  mix-blend-mode:screen;
+  will-change:transform,opacity;
+}
+.cine-tap-glow.active{
+  animation:cineTap .8s ease-out forwards;
+}
+@keyframes cineTap{
+  0%{transform:translate(-50%,-50%) scale(.2);opacity:1;}
+  100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;}
+}
+
+/* Desktop spotlight follow */
+.cine-spotlight{
+  position:fixed;inset:0;
+  pointer-events:none;
+  z-index:10000;
+  background:radial-gradient(circle 320px at var(--mx) var(--my),
+    rgba(232,180,108,.16) 0%,
+    rgba(232,180,108,.04) 40%,
+    transparent 70%);
+  mix-blend-mode:soft-light;
+  opacity:0;
+  transition:opacity .5s ease;
+}
+@media (hover:hover) and (pointer:fine){
+  #cinematic-intro:hover .cine-spotlight{opacity:1;}
+}
+
+/* ─── ÉCRAN 2 : Scrollytelling ───────────────────── */
+.cine-story{
+  position:relative;
+  background:linear-gradient(180deg,#050907 0%,#0B130E 50%,#15221B 100%);
+  z-index:1;
+}
+.cine-story-inner{
+  display:flex;flex-direction:column;
+  padding:0 max(24px,env(safe-area-inset-left)) 0 max(24px,env(safe-area-inset-right));
+}
+.cine-step{
+  position:relative;
+  min-height:100vh;min-height:100svh;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:80px 0;
+  max-width:680px;margin:0 auto;
+  opacity:0;transform:translateY(40px);
+  transition:opacity .9s cubic-bezier(.2,.8,.2,1), transform .9s cubic-bezier(.2,.8,.2,1);
+}
+.cine-step.in-view{opacity:1;transform:none;}
+.cine-step-num{
+  display:inline-block;
+  font:600 12px/1 'IBM Plex Mono',monospace;
+  letter-spacing:.32em;
+  color:#E0B97D;
+  margin-bottom:20px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(212,165,107,.25);
+  width:max-content;
+}
+.cine-step h2{
+  margin:0 0 16px;
+  font-family:'Fraunces',serif;
+  font-weight:500;
+  font-size:clamp(48px,9vw,96px);
+  font-variation-settings:'opsz' 144,'SOFT' 30,'WONK' 1;
+  line-height:1;
+  letter-spacing:-.02em;
+  background:linear-gradient(180deg,#F4DDB0 0%,#D4A56B 100%);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;
+}
+.cine-step h2 em{
+  font-style:italic;
+  font-family:'Instrument Serif','Fraunces',serif;
+  font-weight:400;
+  background:linear-gradient(180deg,#EAE6DA 0%,#A8B5A8 100%);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;
+}
+.cine-step p{
+  margin:0 0 36px;
+  font-family:'Instrument Serif','Fraunces',serif;
+  font-weight:400;
+  font-size:clamp(18px,3.4vw,24px);
+  line-height:1.5;
+  color:rgba(234,230,218,.78);
+  max-width:520px;
+}
+.cine-step-art{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/10;
+  border-radius:24px;
+  overflow:hidden;
+  border:1px solid rgba(212,165,107,.18);
+  background:rgba(15,22,18,.55);
+  box-shadow:
+    0 30px 60px -20px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+.cine-step-art::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 60%, rgba(232,180,108,.18) 0%, transparent 60%);
+}
+
+/* Art Préparer — gear icons drift in */
+.cine-art-prep::after{
+  content:"";position:absolute;inset:0;
+  background:
+    /* top mountain ridge silhouette */
+    linear-gradient(180deg,transparent 60%,rgba(15,22,18,.85) 100%),
+    /* gear icon grid using emojis as decorative bg (a11y hidden) */
+    repeating-linear-gradient(45deg,transparent 0,transparent 40px,rgba(212,165,107,.05) 40px,rgba(212,165,107,.05) 41px);
+}
+.cine-art-prep .gear{
+  position:absolute;font-size:42px;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.5));
+  opacity:0;transform:translateY(20px);
+  transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1);
+}
+.cine-step.in-view .cine-art-prep .gear{opacity:1;transform:none;}
+.cine-art-prep .gear:nth-child(1){left:12%;top:22%;transition-delay:.2s;}
+.cine-art-prep .gear:nth-child(2){left:34%;top:48%;transition-delay:.35s;}
+.cine-art-prep .gear:nth-child(3){left:58%;top:28%;transition-delay:.5s;}
+.cine-art-prep .gear:nth-child(4){left:78%;top:55%;transition-delay:.65s;}
+.cine-art-prep .gear:nth-child(5){left:22%;top:68%;transition-delay:.8s;}
+
+/* Art Peser — balance tilt */
+.cine-art-weigh{display:flex;align-items:center;justify-content:center;}
+.cine-art-weigh svg{
+  width:80%;max-width:420px;height:auto;
+  transform:rotate(-3deg);
+  transition:transform 1.2s cubic-bezier(.2,.8,.2,1);
+}
+.cine-step.in-view .cine-art-weigh svg{transform:rotate(2deg);}
+
+/* Art Partir — hiker silhouette walking */
+.cine-art-go{display:flex;align-items:flex-end;justify-content:center;}
+.cine-art-go svg{
+  width:90%;max-width:520px;height:90%;
+  transform:translateX(-12%);
+  transition:transform 1.4s cubic-bezier(.2,.8,.2,1);
+}
+.cine-step.in-view .cine-art-go svg{transform:translateX(8%);}
+
+/* Final CTA at end of scrollytelling */
+.cine-final{
+  min-height:60vh;min-height:60svh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 24px max(80px,env(safe-area-inset-bottom));
+  text-align:center;
+  background:radial-gradient(ellipse at 50% 0%,rgba(212,165,107,.12) 0%,transparent 60%);
+}
+.cine-final-tagline{
+  font-family:'Instrument Serif','Fraunces',serif;
+  font-style:italic;
+  font-size:clamp(20px,4.4vw,30px);
+  color:rgba(234,230,218,.7);
+  margin:0 0 28px;
+  max-width:480px;
+}
+.cine-enter{
+  display:inline-flex;align-items:center;gap:14px;
+  min-height:56px;padding:0 32px;
+  background:linear-gradient(180deg,#E0B97D 0%,#C4924D 100%);
+  border:none;border-radius:999px;
+  color:#1A1208;
+  font:600 14px/1 'Inter',sans-serif;
+  letter-spacing:.16em;text-transform:uppercase;
+  cursor:pointer;
+  box-shadow:0 16px 36px -12px rgba(212,165,107,.55);
+  transition:transform .25s ease,box-shadow .25s ease;
+}
+.cine-enter:hover,.cine-enter:focus-visible{
+  transform:translateY(-2px);
+  box-shadow:0 22px 50px -14px rgba(212,165,107,.7);
+  outline:none;
+}
+.cine-enter:focus-visible{box-shadow:0 22px 50px -14px rgba(212,165,107,.7),0 0 0 3px rgba(212,165,107,.4);}
+.cine-enter svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+/* Mobile-specific tweaks */
+@media (max-width:600px){
+  .cine-step{padding:60px 8px;}
+  .cine-step h2{font-size:clamp(40px,11vw,72px);}
+  .cine-mtn-1{height:30%;}
+  .cine-mtn-2{height:36%;}
+  .cine-step-art{aspect-ratio:5/4;}
+}
+
+/* Reduced motion fallback — fade only */
+#cinematic-intro.reduced .cine-mist,
+#cinematic-intro.reduced .cine-particles,
+#cinematic-intro.reduced .cine-sun{
+  animation:none!important;
+}
+#cinematic-intro.reduced .cine-logo span,
+#cinematic-intro.reduced .cine-tagline,
+#cinematic-intro.reduced .cine-overline,
+#cinematic-intro.reduced .cine-scroll-hint{
+  animation:none!important;opacity:1!important;transform:none!important;filter:none!important;
+}
+#cinematic-intro.reduced .cine-step{opacity:1;transform:none;}
+@media (prefers-reduced-motion:reduce){
+  #cinematic-intro *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.1s!important;}
+  .cine-logo span{opacity:1!important;transform:none!important;filter:none!important;}
+  .cine-tagline,.cine-overline,.cine-scroll-hint{opacity:1!important;transform:none!important;}
+  .cine-mist,.cine-sun,.cine-particles{display:none!important;}
+}
 </style>
 </head>
 <body>
+
+<!-- ══════════════════════════════════════════════════════════
+     CINEMATIC INTRO — Phase 1
+     Plays once on first visit. Skippable. Honors reduced-motion.
+     ══════════════════════════════════════════════════════════ -->
+<div id="cinematic-intro" hidden aria-label="Introduction cinématique Trail">
+  <button type="button" class="cine-skip" id="cine-skip" aria-label="Passer l'introduction">Passer</button>
+  <div class="cine-spotlight" aria-hidden="true"></div>
+  <div class="cine-tap-glow" id="cine-tap-glow" aria-hidden="true"></div>
+
+  <!-- ÉCRAN 1 — Cinematic landing -->
+  <section class="cine-landing" aria-hidden="true">
+    <div class="cine-sky"></div>
+    <div class="cine-sun"></div>
+    <div class="cine-mist cine-mist-back"></div>
+
+    <!-- 4-layer parallax mountain silhouettes -->
+    <svg class="cine-mtn cine-mtn-4" viewBox="0 0 1440 600" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,600 L0,360 L120,300 L260,340 L400,260 L540,310 L700,240 L860,290 L1020,220 L1180,280 L1320,230 L1440,260 L1440,600 Z" fill="#1A2520" opacity=".95"/>
+    </svg>
+    <svg class="cine-mtn cine-mtn-3" viewBox="0 0 1440 600" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,600 L0,420 L100,340 L220,400 L360,290 L500,360 L640,260 L800,330 L960,240 L1120,310 L1280,250 L1440,300 L1440,600 Z" fill="#15201B"/>
+    </svg>
+    <svg class="cine-mtn cine-mtn-2" viewBox="0 0 1440 600" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,600 L0,460 L140,360 L300,420 L440,300 L600,380 L760,270 L920,350 L1080,290 L1240,340 L1440,310 L1440,600 Z" fill="#0E1814"/>
+    </svg>
+    <svg class="cine-mtn cine-mtn-1" viewBox="0 0 1440 600" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,600 L0,500 L120,440 L260,470 L420,400 L580,450 L740,380 L900,440 L1080,400 L1240,450 L1440,420 L1440,600 Z" fill="#070C09"/>
+    </svg>
+
+    <div class="cine-mist cine-mist-front"></div>
+    <canvas class="cine-particles" id="cine-particles" aria-hidden="true"></canvas>
+
+    <div class="cine-hero">
+      <div class="cine-overline">Bienvenue</div>
+      <div class="cine-logo" aria-label="Trail">
+        <span style="--i:0">T</span><span style="--i:1">R</span><span style="--i:2">A</span><span style="--i:3">I</span><span style="--i:4">L</span>
+      </div>
+      <p class="cine-tagline"><em>Mon trek,</em> équipé.</p>
+    </div>
+
+    <div class="cine-scroll-hint" aria-hidden="true">
+      <span>Scroll</span>
+      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </section>
+
+  <!-- ÉCRAN 2 — Scrollytelling 3 sections -->
+  <div class="cine-story">
+    <div class="cine-story-inner">
+      <article class="cine-step" data-step="prep">
+        <span class="cine-step-num">01 — Étape</span>
+        <h2><em>Préparer</em> le départ.</h2>
+        <p>Liste tout ce dont tu as besoin, du sac à dos à la dernière allumette. Trail garde la trace.</p>
+        <div class="cine-step-art cine-art-prep" aria-hidden="true">
+          <span class="gear">🥾</span><span class="gear">🎒</span><span class="gear">🏕️</span><span class="gear">🔦</span><span class="gear">🧭</span>
+        </div>
+      </article>
+
+      <article class="cine-step" data-step="weigh">
+        <span class="cine-step-num">02 — Étape</span>
+        <h2><em>Peser</em> chaque gramme.</h2>
+        <p>Surveille la charge. Trail calcule le poids du sac et alerte si tu dépasses ton objectif.</p>
+        <div class="cine-step-art cine-art-weigh" aria-hidden="true">
+          <svg viewBox="0 0 200 140" fill="none" stroke="#D4A56B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="20" y1="40" x2="180" y2="40"/>
+            <line x1="100" y1="40" x2="100" y2="120"/>
+            <rect x="60" y="105" width="80" height="14" rx="3" fill="rgba(212,165,107,.12)"/>
+            <circle cx="40" cy="40" r="22" fill="rgba(141,216,168,.12)" stroke="#8DD8A8"/>
+            <circle cx="160" cy="40" r="22" fill="rgba(212,165,107,.18)"/>
+            <line x1="40" y1="18" x2="40" y2="40" stroke="#8DD8A8"/>
+            <line x1="160" y1="18" x2="160" y2="40"/>
+          </svg>
+        </div>
+      </article>
+
+      <article class="cine-step" data-step="go">
+        <span class="cine-step-num">03 — Étape</span>
+        <h2><em>Partir</em> léger.</h2>
+        <p>Le sentier t'attend. Trail t'accompagne du premier achat à la dernière étape.</p>
+        <div class="cine-step-art cine-art-go" aria-hidden="true">
+          <svg viewBox="0 0 400 200" fill="none" stroke="#E0B97D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" preserveAspectRatio="xMidYMax meet">
+            <!-- ridge line -->
+            <path d="M0,160 L60,120 L120,140 L200,80 L280,110 L340,90 L400,120 L400,200 L0,200 Z" fill="rgba(15,22,18,.85)" stroke="none"/>
+            <path d="M0,160 L60,120 L120,140 L200,80 L280,110 L340,90 L400,120" stroke="rgba(212,165,107,.5)"/>
+            <!-- hiker silhouette -->
+            <g transform="translate(140,135)" fill="#E0B97D" stroke="none">
+              <circle cx="0" cy="-20" r="4"/>
+              <path d="M-1,-16 L-1,0 L-6,12 L-3,12 L1,2 L4,12 L7,12 L2,0 L2,-16 Z"/>
+              <path d="M-1,-12 L-9,-6 L-7,-3 L0,-9 Z"/>
+              <line x1="6" y1="-8" x2="11" y2="6" stroke="#E0B97D" stroke-width="1.2"/>
+            </g>
+            <!-- sun glow -->
+            <circle cx="320" cy="60" r="22" fill="rgba(232,180,108,.18)" stroke="none"/>
+            <circle cx="320" cy="60" r="10" fill="rgba(232,180,108,.4)" stroke="none"/>
+          </svg>
+        </div>
+      </article>
+
+      <section class="cine-final">
+        <p class="cine-final-tagline">Du premier achat à la dernière étape.<br><em>Tout ton matériel, en un seul endroit.</em></p>
+        <button type="button" class="cine-enter" id="cine-enter">
+          Entrer dans Trail
+          <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </section>
+    </div>
+  </div>
+</div>
 
 <!-- ── SCROLL PROGRESS RIBBON ──────────────────────── -->
 <div class="scroll-ribbon"></div>
@@ -4559,8 +5121,149 @@ footer .dot{
   // Vérifier si un trek est partagé dans l'URL
   setTimeout(checkForSharedTrek, 100);
 
-  // Lancer le splash + onboarding
-  showSplash();
+  // Lancer l'intro cinématique (Phase 1) → splash → onboarding
+  bootCinematicIntro();
+
+  // ===================================================================
+  // CINEMATIC INTRO — Phase 1
+  // Plays once. Skippable. Honors prefers-reduced-motion + saveData.
+  // ===================================================================
+  function bootCinematicIntro(){
+    const INTRO_KEY = 'trail-intro-seen';
+    const root = document.getElementById('cinematic-intro');
+    if (!root) { showSplash(); return; }
+
+    const seen = (function(){ try { return localStorage.getItem(INTRO_KEY); } catch(_) { return null; } })();
+    if (seen) {
+      root.parentNode && root.parentNode.removeChild(root);
+      showSplash();
+      return;
+    }
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const slow = !!(conn && (conn.saveData || /(2g|slow-2g)/.test(conn.effectiveType||'')));
+
+    root.hidden = false;
+    document.documentElement.classList.add('intro-locked');
+    document.body.classList.add('intro-locked');
+    if (reduced || slow) root.classList.add('reduced');
+
+    const finish = () => {
+      try { localStorage.setItem(INTRO_KEY, '1'); } catch(_) {}
+      root.classList.add('exit');
+      document.documentElement.classList.remove('intro-locked');
+      document.body.classList.remove('intro-locked');
+      stopParticles();
+      setTimeout(() => {
+        root.parentNode && root.parentNode.removeChild(root);
+        showSplash();
+      }, 600);
+    };
+
+    document.getElementById('cine-skip').addEventListener('click', finish);
+    document.getElementById('cine-enter').addEventListener('click', finish);
+
+    // Mouse follow → CSS vars (--mx, --my for spotlight, --px, --py for parallax)
+    let raf = null, lastX = 0, lastY = 0;
+    const supportsHover = matchMedia('(hover:hover) and (pointer:fine)').matches;
+    if (supportsHover && !reduced) {
+      root.addEventListener('mousemove', (e) => {
+        lastX = e.clientX; lastY = e.clientY;
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          const w = window.innerWidth, h = window.innerHeight;
+          root.style.setProperty('--mx', lastX + 'px');
+          root.style.setProperty('--my', lastY + 'px');
+          root.style.setProperty('--px', ((lastX/w) - .5).toFixed(3));
+          root.style.setProperty('--py', ((lastY/h) - .5).toFixed(3));
+          raf = null;
+        });
+      }, { passive: true });
+    }
+
+    // Mobile tap → glow ripple
+    const tapGlow = document.getElementById('cine-tap-glow');
+    if (tapGlow && !reduced) {
+      root.addEventListener('touchstart', (e) => {
+        const t = e.touches[0]; if (!t) return;
+        tapGlow.style.left = t.clientX + 'px';
+        tapGlow.style.top = t.clientY + 'px';
+        tapGlow.classList.remove('active');
+        // force reflow
+        void tapGlow.offsetWidth;
+        tapGlow.classList.add('active');
+      }, { passive: true });
+    }
+
+    // Scrollytelling — IntersectionObserver reveals
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(en => { if (en.isIntersecting) en.target.classList.add('in-view'); });
+      }, { threshold: 0.35 });
+      root.querySelectorAll('.cine-step').forEach(s => io.observe(s));
+    } else {
+      root.querySelectorAll('.cine-step').forEach(s => s.classList.add('in-view'));
+    }
+
+    // Keyboard: Escape skips
+    const onKey = (e) => { if (e.key === 'Escape') { finish(); document.removeEventListener('keydown', onKey); } };
+    document.addEventListener('keydown', onKey);
+
+    // ── Particles (golden dust) ──
+    let particleStop = false;
+    const stopParticlesFn = () => { particleStop = true; };
+    let stopParticles = stopParticlesFn;
+
+    if (!reduced && !slow) {
+      const canvas = document.getElementById('cine-particles');
+      if (canvas && canvas.getContext) {
+        const ctx = canvas.getContext('2d', { alpha: true });
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W = 0, H = 0;
+        const resize = () => {
+          const r = canvas.getBoundingClientRect();
+          W = r.width; H = r.height;
+          canvas.width = Math.floor(W * dpr);
+          canvas.height = Math.floor(H * dpr);
+          ctx.setTransform(dpr,0,0,dpr,0,0);
+        };
+        resize();
+        window.addEventListener('resize', resize);
+
+        const isMobile = matchMedia('(max-width:600px)').matches;
+        const N = isMobile ? 18 : 30;
+        const parts = [];
+        for (let i = 0; i < N; i++) {
+          parts.push({
+            x: Math.random()*W,
+            y: Math.random()*H,
+            r: 0.6 + Math.random()*1.6,
+            vx: (Math.random()-.5)*.18,
+            vy: -.05 - Math.random()*.18,
+            a: .25 + Math.random()*.55,
+            tw: Math.random()*Math.PI*2
+          });
+        }
+        const tick = () => {
+          if (particleStop) return;
+          ctx.clearRect(0,0,W,H);
+          for (const p of parts) {
+            p.x += p.vx; p.y += p.vy; p.tw += .04;
+            if (p.y < -4) { p.y = H + 4; p.x = Math.random()*W; }
+            if (p.x < -4) p.x = W + 4; else if (p.x > W+4) p.x = -4;
+            const alpha = p.a * (.6 + .4*Math.sin(p.tw));
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(232,200,140,'+alpha.toFixed(3)+')';
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+            ctx.fill();
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }
+  }
 </script>
 
 <!-- ── REDESIGN: scroll-driven animations, parallax, glow ── -->
