@@ -1,0 +1,10 @@
+{
+  "name": "trail-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "audit:desktop": "lighthouse http://localhost:8080/trail-redesigned.html --output=html --output-path=./reports/audit-desktop.html --chrome-flags='--headless --no-sandbox' --preset=desktop --quiet",
+    "audit:mobile": "lighthouse http://localhost:8080/trail-redesigned.html --output=html --output-path=./reports/audit-mobile.html --chrome-flags='--headless --no-sandbox' --form-factor=mobile --throttling.cpuSlowdownMultiplier=4 --quiet",
+    "audit:full": "npm run audit:desktop && npm run audit:mobile"
+  }
+}

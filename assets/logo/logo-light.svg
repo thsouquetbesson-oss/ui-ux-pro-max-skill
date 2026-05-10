@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<defs>
+  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#1F3528"/><stop offset="50%" stop-color="#2A4A36"/><stop offset="100%" stop-color="#0E1A14"/>
+  </linearGradient>
+</defs>
+<g transform="translate(8,18)">
+  <path d="M2 38 L14 16 L24 28 L34 8 L46 38 Z" fill="none" stroke="#15221B" stroke-width="3.2"/>
+  <path d="M0 44 H50" stroke="#15221B" stroke-width="3.2"/>
+</g>
+<g transform="translate(72,16)" font-family="Fraunces,serif" font-weight="600" font-size="48" letter-spacing="0.04em" fill="url(#g1)">
+  <text y="42">TRAIL</text>
+</g>
+</svg>
