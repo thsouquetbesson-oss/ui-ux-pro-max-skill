@@ -467,11 +467,11 @@ header{
 
 .tab{
   flex:1;
-  padding:13px 18px;
+  padding:11px 10px;
   background:transparent;
   border:none;
   border-radius:999px;
-  font-size:.9rem;
+  font-size:.82rem;
   font-weight:600;
   color:var(--muted);
   cursor:pointer;
@@ -496,6 +496,14 @@ header{
 .tab.active.tab-prep{
   background:linear-gradient(135deg,var(--slate) 0%,var(--slate-deep) 100%);
   box-shadow:0 4px 18px var(--slate-glow),inset 0 1px 0 rgba(255,255,255,.18);
+}
+.tab.active.tab-itineraire{
+  background:linear-gradient(135deg,#4a7a5c 0%,#2d5240 100%);
+  box-shadow:0 4px 18px rgba(74,122,92,.45),inset 0 1px 0 rgba(255,255,255,.18);
+}
+.tab.active.tab-budget{
+  background:linear-gradient(135deg,#7a6a3c 0%,#5a4e28 100%);
+  box-shadow:0 4px 18px rgba(212,165,107,.45),inset 0 1px 0 rgba(255,255,255,.18);
 }
 .tab.active::before{
   content:"";
@@ -1739,6 +1747,38 @@ mark.highlight{
   color:var(--moss-bright);
 }
 .back-to-top svg{width:18px;height:18px;}
+
+/* ============================================================
+   PLACEHOLDER PANELS (Itinéraire / Budget)
+   ============================================================ */
+.placeholder-panel{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:60vh;padding:48px 24px;text-align:center;gap:18px;
+}
+.placeholder-icon{
+  width:72px;height:72px;
+  border-radius:20px;
+  background:linear-gradient(180deg,var(--surface),var(--bg-3));
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
+}
+.placeholder-icon svg{width:34px;height:34px;color:var(--gold);}
+.placeholder-title{
+  font-family:'Fraunces',serif;font-weight:600;font-size:1.6rem;
+  background:linear-gradient(135deg,var(--text) 60%,var(--gold));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.placeholder-text{
+  font-size:.9rem;color:var(--muted);max-width:300px;line-height:1.6;
+}
+.placeholder-badge{
+  display:inline-flex;align-items:center;padding:6px 14px;
+  border-radius:20px;font-size:.78rem;font-weight:600;letter-spacing:.05em;
+  background:linear-gradient(135deg,var(--moss-soft),rgba(91,162,119,.08));
+  border:1px solid rgba(141,216,168,.25);color:var(--moss-bright);
+  text-transform:uppercase;
+}
 
 /* ============================================================
    QR CODE
@@ -3145,6 +3185,14 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M4 14h16"/></svg>
       <span>Préparation du sac</span><span class="tab-short">Sac</span>
     </button>
+    <button class="tab tab-itineraire" data-panel="itineraire" onclick="switchTab('itineraire')" aria-label="Itinéraire du trek">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v16"/><path d="M15 6v16"/></svg>
+      <span>Itinéraire</span><span class="tab-short">Itin.</span>
+    </button>
+    <button class="tab tab-budget" data-panel="budget" onclick="switchTab('budget')" aria-label="Budget du trek">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Budget</span><span class="tab-short">Budget</span>
+    </button>
   </div>
 
   <!-- ══ PANEL ACHATS ══════════════════════════════ -->
@@ -3322,6 +3370,30 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   </div>
 
   <footer>Sauvegarde locale<span class="dot"></span>Tes données restent sur cet appareil</footer>
+</div>
+
+<!-- ══ PANEL ITINÉRAIRE (placeholder) ════════════════ -->
+<div class="panel panel-itineraire" id="panel-itineraire">
+  <div class="placeholder-panel reveal">
+    <div class="placeholder-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v16"/><path d="M15 6v16"/></svg>
+    </div>
+    <h2 class="placeholder-title">Itinéraire</h2>
+    <p class="placeholder-text">Visualise ton parcours en 3D avec le profil d'altitude, les étapes et les points clés. Bientôt disponible.</p>
+    <div class="placeholder-badge">Bientôt</div>
+  </div>
+</div>
+
+<!-- ══ PANEL BUDGET (placeholder) ════════════════════ -->
+<div class="panel panel-budget" id="panel-budget">
+  <div class="placeholder-panel reveal">
+    <div class="placeholder-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <h2 class="placeholder-title">Budget</h2>
+    <p class="placeholder-text">Suis tes dépenses réelles face à ton prévisionnel, catégorie par catégorie. Bientôt disponible.</p>
+    <div class="placeholder-badge">Bientôt</div>
+  </div>
 </div>
 
 <button class="back-to-top" id="back-to-top" type="button" aria-label="Retour en haut" onclick="scrollToTop()">
@@ -3711,6 +3783,18 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   }
 
   // ===================================================================
+  // DATA STRUCTURES — future tabs
+  // ===================================================================
+  // Itinéraire: tableau de waypoints géolocalisés (réservé Three.js + low-poly)
+  // waypoints = [{ lat: Number, lng: Number, alt: Number, label: String, day: Number, etape: String }]
+
+  // Budget: prévisionnel vs réel par catégorie (réservé graph)
+  // budget = {
+  //   previsionnel: { [cat]: amount },
+  //   reel: [{ date: String, cat: String, label: String, amount: Number }]
+  // }
+
+  // ===================================================================
   // ONGLETS
   // ===================================================================
   function switchTab(name) {
@@ -3720,6 +3804,7 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       renderTrekSelector();
       renderPrep();
     }
+    // itineraire and budget panels are placeholders — no render needed yet
   }
 
   // ===================================================================
