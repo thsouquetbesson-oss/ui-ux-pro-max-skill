@@ -1828,6 +1828,7 @@ mark.highlight{
   margin-bottom:18px;
   box-shadow:var(--shadow-md);
 }
+.itin-stats-grid{grid-template-columns:repeat(4,1fr);margin-top:0;margin-bottom:18px;}
 .itin-stat{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;}
 .itin-stat-icon{
   width:42px;height:42px;border-radius:13px;
@@ -1952,7 +1953,7 @@ mark.highlight{
 .waypoint-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
 
 @media (max-width:480px){
-  .itin-stats{grid-template-columns:repeat(2,1fr);gap:14px;}
+  .itin-stats,.itin-stats-grid{grid-template-columns:repeat(2,1fr);gap:14px;}
   .itin-3d-canvas-wrap{height:240px;}
 }
 
@@ -1967,6 +1968,7 @@ mark.highlight{
   box-shadow:var(--shadow-md);
 }
 .budget-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
+.budget-stats > .stats{margin-top:0;margin-bottom:14px;}
 .budget-stat{display:flex;flex-direction:column;gap:4px;text-align:center;}
 .budget-stat-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 .budget-stat-value{
@@ -3708,37 +3710,37 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   </div>
 
   <!-- État rempli (waypoints existent) -->
-  <div class="itin-content" id="itin-content" hidden>
+  <div class="itin-content" id="itin-content" style="display:none">
 
     <!-- Stats header -->
-    <div class="itin-stats reveal" data-glow>
-      <div class="itin-stat">
-        <div class="itin-stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c4-8 14-8 18 0"/><path d="M3 12c4 8 14 8 18 0"/><circle cx="12" cy="12" r="2"/></svg>
+    <div class="stats reveal-stagger itin-stats-grid" data-glow>
+      <div class="stat green">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c4-8 14-8 18 0"/><path d="M3 12c4 8 14 8 18 0"/><circle cx="12" cy="12" r="2"/></svg>
         </div>
-        <div class="itin-stat-value" id="itin-distance">0 km</div>
-        <div class="itin-stat-label">Distance</div>
+        <div class="stat-label">Distance</div>
+        <div class="stat-value" id="itin-distance">0 km</div>
       </div>
-      <div class="itin-stat">
-        <div class="itin-stat-icon ascent">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 17 12 11 18 17"/><polyline points="6 11 12 5 18 11"/></svg>
+      <div class="stat amber">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 17 12 11 18 17"/><polyline points="6 11 12 5 18 11"/></svg>
         </div>
-        <div class="itin-stat-value" id="itin-ascent">0 m</div>
-        <div class="itin-stat-label">Dénivelé +</div>
+        <div class="stat-label">Dénivelé +</div>
+        <div class="stat-value" id="itin-ascent">0 m</div>
       </div>
-      <div class="itin-stat">
-        <div class="itin-stat-icon descent">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 7 12 13 18 7"/><polyline points="6 13 12 19 18 13"/></svg>
+      <div class="stat slate">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 7 12 13 18 7"/><polyline points="6 13 12 19 18 13"/></svg>
         </div>
-        <div class="itin-stat-value" id="itin-descent">0 m</div>
-        <div class="itin-stat-label">Dénivelé −</div>
+        <div class="stat-label">Dénivelé −</div>
+        <div class="stat-value" id="itin-descent">0 m</div>
       </div>
-      <div class="itin-stat">
-        <div class="itin-stat-icon days">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div class="stat">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </div>
-        <div class="itin-stat-value" id="itin-days">0</div>
-        <div class="itin-stat-label">Jours</div>
+        <div class="stat-label">Jours</div>
+        <div class="stat-value" id="itin-days">0</div>
       </div>
     </div>
 
@@ -3794,18 +3796,27 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
 
   <!-- Stats header -->
   <div class="budget-stats reveal" data-glow>
-    <div class="budget-stats-row">
-      <div class="budget-stat">
-        <div class="budget-stat-label">Prévisionnel</div>
-        <div class="budget-stat-value" id="budget-previsionnel">0 €</div>
+    <div class="stats reveal-stagger">
+      <div class="stat green">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+        </div>
+        <div class="stat-label">Prévisionnel</div>
+        <div class="stat-value" id="budget-previsionnel">0 €</div>
       </div>
-      <div class="budget-stat">
-        <div class="budget-stat-label">Dépensé</div>
-        <div class="budget-stat-value spent" id="budget-spent">0 €</div>
+      <div class="stat amber">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="stat-label">Dépensé</div>
+        <div class="stat-value" id="budget-spent">0 €</div>
       </div>
-      <div class="budget-stat">
-        <div class="budget-stat-label" id="budget-remaining-label">Restant</div>
-        <div class="budget-stat-value remaining" id="budget-remaining">0 €</div>
+      <div class="stat slate" id="budget-remaining-stat">
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        </div>
+        <div class="stat-label" id="budget-remaining-label">Restant</div>
+        <div class="stat-value" id="budget-remaining">0 €</div>
       </div>
     </div>
     <div class="budget-progress-bar">
@@ -5900,12 +5911,12 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
     const empty = document.getElementById("itin-empty");
     const content = document.getElementById("itin-content");
     if (itinData.waypoints.length === 0) {
-      empty.hidden = false;
-      content.hidden = true;
+      empty.style.display = "";
+      content.style.display = "none";
       return;
     }
-    empty.hidden = true;
-    content.hidden = false;
+    empty.style.display = "none";
+    content.style.display = "";
 
     const s = computeItinStats();
     document.getElementById("itin-distance").textContent = s.distance > 0 ? `${s.distance.toFixed(1)} km` : "0 km";
@@ -6295,17 +6306,21 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
     document.getElementById("budget-spent").textContent = formatEuro(totalReel);
     const remEl = document.getElementById("budget-remaining");
     const remLabel = document.getElementById("budget-remaining-label");
+    const remStat = document.getElementById("budget-remaining-stat");
     if (totalPrev === 0) {
       remEl.textContent = "—";
       remEl.classList.remove("over");
+      remStat.classList.remove("over");
       remLabel.textContent = "Restant";
     } else if (remaining < 0) {
       remEl.textContent = "−" + formatEuro(Math.abs(remaining));
       remEl.classList.add("over");
+      remStat.classList.add("over");
       remLabel.textContent = "Dépassement";
     } else {
       remEl.textContent = formatEuro(remaining);
       remEl.classList.remove("over");
+      remStat.classList.remove("over");
       remLabel.textContent = "Restant";
     }
     document.getElementById("budget-progress-fill").style.width = pct.toFixed(1) + "%";
