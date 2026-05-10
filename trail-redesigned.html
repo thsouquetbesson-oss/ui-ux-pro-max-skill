@@ -224,7 +224,26 @@ body::after{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.93 0 0 0 0 0.86 0 0 0 .12 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-.wrap{max-width:920px;margin:0 auto;position:relative;z-index:1;}
+.wrap{
+  max-width:500px;margin:0 auto;position:relative;z-index:1;
+  padding:0 14px;
+}
+@media (min-width:600px){
+  .wrap{
+    padding:0 18px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(212,165,107,.06);
+    border-radius:0;
+  }
+  .wrap::before{
+    content:"";
+    position:absolute;
+    inset:-40px -60px;
+    background:radial-gradient(ellipse at center, rgba(212,165,107,.08), rgba(141,216,168,.04) 40%, transparent 70%);
+    pointer-events:none;
+    z-index:-1;
+    filter:blur(20px);
+  }
+}
 
 /* ============================================================
    SCROLL PROGRESS RIBBON (top of viewport)
@@ -1828,7 +1847,7 @@ mark.highlight{
   margin-bottom:18px;
   box-shadow:var(--shadow-md);
 }
-.itin-stats-grid{grid-template-columns:repeat(4,1fr);margin-top:0;margin-bottom:18px;}
+.itin-stats-grid{grid-template-columns:repeat(2,1fr);margin-top:0;margin-bottom:18px;}
 .itin-stat{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;}
 .itin-stat-icon{
   width:42px;height:42px;border-radius:13px;
@@ -1968,7 +1987,7 @@ mark.highlight{
   box-shadow:var(--shadow-md);
 }
 .budget-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
-.budget-stats > .stats{margin-top:0;margin-bottom:14px;}
+.budget-stats > .stats{margin-top:0;margin-bottom:14px;grid-template-columns:repeat(3,1fr);}
 .budget-stat{display:flex;flex-direction:column;gap:4px;text-align:center;}
 .budget-stat-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 .budget-stat-value{
@@ -2004,8 +2023,9 @@ mark.highlight{
 .budget-donut-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
 .budget-donut-title{font-family:'Fraunces',serif;font-weight:500;font-size:1.05rem;}
 .budget-donut-content{
-  display:grid;grid-template-columns:160px 1fr;gap:18px;align-items:center;
+  display:grid;grid-template-columns:1fr;gap:18px;align-items:center;text-align:center;
 }
+.budget-donut-content .budget-legend-item{justify-content:flex-start;}
 .budget-donut-svg-wrap{position:relative;width:160px;height:160px;justify-self:center;}
 #budget-donut-svg{width:100%;height:100%;display:block;transform:rotate(-90deg);}
 .budget-donut-center{
@@ -2028,11 +2048,8 @@ mark.highlight{
   color:var(--muted);font-size:.72rem;
 }
 
-@media (max-width:480px){
-  .budget-stats-row{grid-template-columns:1fr;gap:8px;}
-  .budget-stat{flex-direction:row;justify-content:space-between;text-align:left;}
-  .budget-donut-content{grid-template-columns:1fr;text-align:center;}
-  .budget-legend-item{justify-content:flex-start;}
+@media (max-width:380px){
+  .budget-stats > .stats{grid-template-columns:1fr;gap:8px;}
 }
 
 .budget-cats{margin-bottom:18px;}
@@ -2629,7 +2646,7 @@ footer .dot{
   h1{font-size:2rem;}
   header{padding:48px 0 28px;}
   .stats{grid-template-columns:1fr 1fr;gap:10px;}
-  .stats:not(.solo) .stat:nth-child(3){grid-column:1/-1;}
+  .stats:not(.solo):not(.itin-stats-grid) .stat:nth-child(3){grid-column:1/-1;}
   .stat{padding:14px;}
   .icon-grid{grid-template-columns:repeat(6,1fr);}
   .tab{font-size:.85rem;padding:11px 10px;}
@@ -3690,10 +3707,7 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
     <div id="prep-categories"></div>
   </div>
 
-  <footer>Sauvegarde locale<span class="dot"></span>Tes données restent sur cet appareil</footer>
-</div>
-
-<!-- ══ PANEL ITINÉRAIRE ══════════════════════════════ -->
+  <!-- ══ PANEL ITINÉRAIRE ══════════════════════════════ -->
 <div class="panel panel-itineraire" id="panel-itineraire">
 
   <!-- État vide (premier lancement) -->
@@ -3866,6 +3880,9 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
     </div>
     <div id="budget-trans-list"></div>
   </div>
+</div>
+
+  <footer>Sauvegarde locale<span class="dot"></span>Tes données restent sur cet appareil</footer>
 </div>
 
 <button class="back-to-top" id="back-to-top" type="button" aria-label="Retour en haut" onclick="scrollToTop()">
