@@ -1888,6 +1888,46 @@ mark.highlight{
   background:#0d1f16;position:relative;
 }
 .itin-map-canvas .mapboxgl-canvas{border-radius:14px;}
+.itin-map-tool.play{
+  background:linear-gradient(145deg,#E0B97D,#C99A5A);
+  border-color:rgba(212,165,107,.5);color:#15221B;
+}
+.itin-map-tool.play:hover{filter:brightness(1.08);}
+.itin-map-tool.play.playing{background:linear-gradient(145deg,#E5946C,#C77349);color:#fff;}
+.itin-map-tool.play svg{width:14px;height:14px;}
+.itin-cine-overlay{
+  position:absolute;left:12px;right:12px;bottom:12px;z-index:5;
+  background:linear-gradient(180deg, rgba(13,31,22,.55), rgba(13,31,22,.92));
+  border:1px solid rgba(212,165,107,.25);border-radius:12px;
+  padding:14px 16px;backdrop-filter:blur(16px);
+  box-shadow:0 12px 32px rgba(0,0,0,.45);
+  animation:cineSlideIn .35s var(--ease-spring);
+  pointer-events:none;
+}
+.itin-cine-overlay[hidden]{display:none;}
+@keyframes cineSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.itin-cine-progress{
+  height:3px;background:rgba(255,255,255,.10);border-radius:99px;
+  overflow:hidden;margin-bottom:10px;
+}
+.itin-cine-progress-fill{
+  height:100%;width:0;
+  background:linear-gradient(90deg,#8DD8A8,#E0B97D);
+  border-radius:99px;
+  transition:width .8s var(--ease-spring);
+  box-shadow:0 0 12px rgba(224,185,125,.55);
+}
+.itin-cine-info{display:flex;align-items:baseline;justify-content:space-between;gap:14px;}
+.itin-cine-label{
+  font-family:'Fraunces',serif;font-weight:500;font-size:1rem;
+  color:var(--gold-light);letter-spacing:.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.itin-cine-meta{
+  font-family:'IBM Plex Mono',monospace;font-size:.74rem;
+  color:var(--muted);letter-spacing:.04em;text-transform:uppercase;
+  white-space:nowrap;
+}
 .itin-map-empty{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   height:160px;padding:18px;text-align:center;color:var(--muted);font-size:.85rem;
@@ -3878,6 +3918,10 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       <div class="itin-map-header">
         <div class="itin-map-title">Carte 3D</div>
         <div class="itin-map-toolbar">
+          <button class="itin-map-tool play" type="button" id="itin-map-play" onclick="toggleItinCinematic()" aria-label="Lancer la lecture cinématique">
+            <svg class="play-ico" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+            <svg class="stop-ico" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          </button>
           <button class="itin-map-tool" type="button" id="itin-map-fit" onclick="fitItinMapToWaypoints()" aria-label="Recentrer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V3h4M21 7V3h-4M3 17v4h4M21 17v4h-4"/></svg>
           </button>
@@ -3886,7 +3930,15 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
           </button>
         </div>
       </div>
-      <div class="itin-map-canvas" id="itin-map-canvas"></div>
+      <div class="itin-map-canvas" id="itin-map-canvas">
+        <div class="itin-cine-overlay" id="itin-cine-overlay" hidden>
+          <div class="itin-cine-progress"><div class="itin-cine-progress-fill" id="itin-cine-progress-fill"></div></div>
+          <div class="itin-cine-info">
+            <div class="itin-cine-label" id="itin-cine-label">—</div>
+            <div class="itin-cine-meta" id="itin-cine-meta">—</div>
+          </div>
+        </div>
+      </div>
       <div class="itin-map-empty" id="itin-map-empty" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/></svg>
         <span>Ajoute des étapes avec coordonnées GPS pour les voir sur la carte 3D.</span>
@@ -6788,6 +6840,124 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
 
   window.fitItinMapToWaypoints = fitItinMapToWaypoints;
   window.toggleItinMapPitch = toggleItinMapPitch;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE E — CINEMATIC FLYTHROUGH (camera playback over waypoints)
+  // ═══════════════════════════════════════════════════════════════════
+  let cineActive = false;
+  let cineAbort = null;
+
+  function bearingBetween(a, b) {
+    const φ1 = a[1] * Math.PI/180, φ2 = b[1] * Math.PI/180;
+    const Δλ = (b[0] - a[0]) * Math.PI/180;
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    return (Math.atan2(y, x) * 180/Math.PI + 360) % 360;
+  }
+
+  function setCineUI(active) {
+    const btn = document.getElementById('itin-map-play');
+    if (!btn) return;
+    btn.classList.toggle('playing', active);
+    btn.querySelector('.play-ico').hidden = active;
+    btn.querySelector('.stop-ico').hidden = !active;
+    document.getElementById('itin-cine-overlay').hidden = !active;
+  }
+
+  function setCineStep(i, total, wp) {
+    document.getElementById('itin-cine-progress-fill').style.width = `${(i/Math.max(1,total-1)) * 100}%`;
+    document.getElementById('itin-cine-label').textContent = wp.label || `Étape ${i+1}`;
+    const meta = [];
+    meta.push(`${i+1}/${total}`);
+    if (wp.alt) meta.push(`${Math.round(wp.alt)} m`);
+    if (wp.type) meta.push(wp.type);
+    document.getElementById('itin-cine-meta').textContent = meta.join(' · ');
+  }
+
+  // Returns a promise resolved on map idle (camera finished its motion) or aborted.
+  function waitMapMove(map, abortSig) {
+    return new Promise(resolve => {
+      let done = false;
+      const finish = () => { if (done) return; done = true; map.off('moveend', finish); resolve(); };
+      map.once('moveend', finish);
+      abortSig.onAbort = finish;
+    });
+  }
+  function sleep(ms, abortSig) {
+    return new Promise(resolve => {
+      const t = setTimeout(resolve, ms);
+      abortSig.onAbort = () => { clearTimeout(t); resolve(); };
+    });
+  }
+
+  async function playItinCinematic() {
+    if (!itinMap || !itinMapLoaded) { showToast('Carte non chargée'); return; }
+    const wps = geoWaypoints();
+    if (wps.length < 1) { showToast('Aucun waypoint géolocalisé'); return; }
+
+    cineActive = true;
+    cineAbort = { aborted: false, onAbort: null };
+    setCineUI(true);
+
+    try {
+      // Intro: overview shot
+      setCineStep(0, wps.length, wps[0]);
+      const bounds = computeBounds(wps, window.mapboxgl);
+      itinMap.fitBounds(bounds, { padding: 70, pitch: 55, duration: 1500, maxZoom: 13 });
+      await waitMapMove(itinMap, cineAbort);
+      if (cineAbort.aborted) return;
+      await sleep(800, cineAbort);
+      if (cineAbort.aborted) return;
+
+      // Per-waypoint flythrough
+      for (let i = 0; i < wps.length; i++) {
+        if (cineAbort.aborted) return;
+        const wp = wps[i];
+        const next = wps[i + 1];
+        setCineStep(i, wps.length, wp);
+        const bearing = next ? bearingBetween([wp.lng, wp.lat], [next.lng, next.lat]) : itinMap.getBearing();
+        itinMap.flyTo({
+          center: [wp.lng, wp.lat],
+          zoom: 13.2,
+          pitch: 70,
+          bearing,
+          speed: 0.6,
+          curve: 1.6,
+          essential: true
+        });
+        await waitMapMove(itinMap, cineAbort);
+        if (cineAbort.aborted) return;
+        await sleep(1400, cineAbort);
+      }
+
+      // Outro: back to overview
+      if (cineAbort.aborted) return;
+      itinMap.fitBounds(bounds, { padding: 70, pitch: 55, duration: 1500, maxZoom: 13 });
+      await waitMapMove(itinMap, cineAbort);
+      await sleep(600, cineAbort);
+    } finally {
+      cineActive = false;
+      setCineUI(false);
+    }
+  }
+
+  function stopItinCinematic() {
+    if (!cineActive) return;
+    if (cineAbort) {
+      cineAbort.aborted = true;
+      if (typeof cineAbort.onAbort === 'function') cineAbort.onAbort();
+    }
+    cineActive = false;
+    setCineUI(false);
+  }
+
+  function toggleItinCinematic() {
+    if (cineActive) stopItinCinematic();
+    else playItinCinematic();
+  }
+
+  window.toggleItinCinematic = toggleItinCinematic;
+  window.stopItinCinematic = stopItinCinematic;
 
   // ═══════════════════════════════════════════════════════════════════
   // BUDGET — prévisionnel par catégorie + transactions réelles
