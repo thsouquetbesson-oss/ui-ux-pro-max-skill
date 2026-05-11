@@ -3330,6 +3330,29 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   font-size:.78rem;font-weight:600;color:var(--moss-bright);
   letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;
 }
+/* Phase D: DEM elevation badges */
+.map-picker-panel-title{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.map-picker-elev{
+  font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;
+  color:#15221B;background:linear-gradient(145deg,#E0B97D,#C99A5A);
+  padding:3px 9px;border-radius:99px;letter-spacing:.02em;
+  box-shadow:0 2px 8px rgba(212,165,107,.35);
+  text-transform:none;
+}
+.map-picker-elev[hidden]{display:none;}
+.map-picker-elev.loading{background:rgba(255,255,255,.08);color:var(--muted);box-shadow:none;}
+.alt-auto-btn{
+  display:inline-flex;align-items:center;
+  background:rgba(212,165,107,.10);border:1px solid rgba(212,165,107,.3);
+  color:var(--gold-light);font-family:'IBM Plex Mono',monospace;
+  font-size:.66rem;font-weight:600;padding:2px 8px;border-radius:99px;
+  cursor:pointer;margin-left:6px;letter-spacing:.04em;text-transform:uppercase;
+  transition:all .2s var(--ease-spring);vertical-align:middle;
+}
+.alt-auto-btn:hover{background:rgba(212,165,107,.22);transform:translateY(-1px);}
+.alt-auto-btn:disabled{opacity:.5;cursor:wait;}
 /* GPX preview list */
 .gpx-preview-item{
   display:flex;align-items:center;gap:10px;
@@ -4095,7 +4118,10 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       <div class="modal-field"><label>Étape</label><input type="text" id="waypoint-etape-input" placeholder="ex : J1"></div>
     </div>
     <div class="modal-row">
-      <div class="modal-field"><label>Altitude (m)</label><input type="number" id="waypoint-alt-input" step="1" min="0" placeholder="2400"></div>
+      <div class="modal-field">
+        <label>Altitude (m) <button type="button" class="alt-auto-btn" id="waypoint-alt-auto" onclick="fetchAltitudeForWaypointModal()" title="Récupérer depuis le terrain">Auto</button></label>
+        <input type="number" id="waypoint-alt-input" step="1" min="0" placeholder="2400">
+      </div>
       <div class="modal-field"><label>Distance étape (km)</label><input type="number" id="waypoint-distance-input" step="0.1" min="0" placeholder="14.5"></div>
     </div>
     <div class="modal-row">
@@ -4153,7 +4179,10 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   <div id="map-picker-map"></div>
   <div class="map-picker-instructions" id="map-picker-instructions">Appuyez sur la carte pour placer une étape</div>
   <div class="map-picker-panel" id="map-picker-panel" hidden>
-    <div class="map-picker-panel-title">Nouvelle étape</div>
+    <div class="map-picker-panel-title">
+      Nouvelle étape
+      <span class="map-picker-elev" id="map-picker-elev" hidden></span>
+    </div>
     <div class="modal-row" style="margin-bottom:10px">
       <div class="modal-field"><label>Nom *</label><input type="text" id="map-picker-label" placeholder="ex : Col de la Vanoise"></div>
       <div class="modal-field">
@@ -6288,6 +6317,18 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       });
       mapPickerMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
       mapPickerMap.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+      // Phase D: enable terrain so queryTerrainElevation works
+      mapPickerMap.on('load', () => {
+        if (!mapPickerMap.getSource('mapbox-dem')) {
+          mapPickerMap.addSource('mapbox-dem', {
+            type: 'raster-dem',
+            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+            tileSize: 512,
+            maxzoom: 14
+          });
+        }
+        mapPickerMap.setTerrain({ source: 'mapbox-dem', exaggeration: 1.0 });
+      });
       mapPickerMap.on('click', e => {
         mapPickerCoords = [e.lngLat.lng, e.lngLat.lat];
         if (mapPickerMarker) mapPickerMarker.remove();
@@ -6296,6 +6337,8 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
           .addTo(mapPickerMap);
         document.getElementById('map-picker-panel').hidden = false;
         document.getElementById('map-picker-instructions').hidden = true;
+        // Phase D: query terrain DEM for elevation
+        queryPickerElevation(mapPickerCoords);
         setTimeout(() => document.getElementById('map-picker-label').focus(), 80);
       });
     }).catch(() => {
@@ -6333,7 +6376,8 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       label, type,
       lat: mapPickerCoords[1],
       lng: mapPickerCoords[0],
-      alt: 0, distance: 0,
+      alt: mapPickerElev != null ? Math.round(mapPickerElev) : 0,
+      distance: 0,
       day: n, etape: 'J' + n, note: null
     });
     saveItin();
@@ -6348,6 +6392,99 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   window.closeMapPicker = closeMapPicker;
   window.cancelMapPickerPoint = cancelMapPickerPoint;
   window.confirmMapPickerPoint = confirmMapPickerPoint;
+
+  // ── Phase D: DEM elevation autofill ──────────────────────────────
+  let mapPickerElev = null;
+
+  function setPickerElevBadge(text, loading) {
+    const el = document.getElementById('map-picker-elev');
+    el.textContent = text;
+    el.classList.toggle('loading', !!loading);
+    el.hidden = !text;
+  }
+
+  function queryPickerElevation(lngLat) {
+    if (!mapPickerMap) { mapPickerElev = null; setPickerElevBadge(''); return; }
+    mapPickerElev = null;
+    setPickerElevBadge('… m', true);
+    // queryTerrainElevation returns null until terrain tiles for this area are loaded.
+    // We poll briefly to catch the value once tiles arrive.
+    const tryAt = Date.now();
+    const tick = () => {
+      try {
+        const e = mapPickerMap.queryTerrainElevation(lngLat, { exaggerated: false });
+        if (Number.isFinite(e)) {
+          mapPickerElev = e;
+          setPickerElevBadge(`${Math.round(e)} m`, false);
+          return;
+        }
+      } catch (_) { /* terrain not ready yet */ }
+      if (Date.now() - tryAt < 4000) {
+        setTimeout(tick, 250);
+      } else {
+        setPickerElevBadge('alt. ?', false);
+      }
+    };
+    tick();
+  }
+
+  // For the waypoint modal: try to fetch altitude via itinMap (which has terrain)
+  // or fall back to a one-shot tilequery against Mapbox Terrain Tiles v2.
+  function fetchAltitudeForWaypointModal() {
+    const lat = parseFloat(document.getElementById('waypoint-lat-input').value);
+    const lng = parseFloat(document.getElementById('waypoint-lng-input').value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      showToast('Renseigne d\'abord les coordonnées GPS');
+      return;
+    }
+    const btn = document.getElementById('waypoint-alt-auto');
+    const altIn = document.getElementById('waypoint-alt-input');
+    btn.disabled = true; btn.textContent = '…';
+
+    // Try local terrain query first
+    const tryLocalMap = (mapInstance) => {
+      if (!mapInstance) return null;
+      try {
+        const e = mapInstance.queryTerrainElevation([lng, lat], { exaggerated: false });
+        return Number.isFinite(e) ? e : null;
+      } catch (_) { return null; }
+    };
+    let elev = tryLocalMap(itinMap) ?? tryLocalMap(mapPickerMap);
+    if (elev != null) {
+      altIn.value = Math.round(elev);
+      btn.disabled = false; btn.textContent = 'Auto';
+      showToast(`Altitude : ${Math.round(elev)} m`);
+      return;
+    }
+
+    // Fallback: Mapbox Tilequery API on terrain-rgb (works without a loaded map)
+    fetch(`https://api.mapbox.com/v4/mapbox.mapbox-terrain-v2/tilequery/${lng},${lat}.json?layers=contour&limit=10&access_token=${MAPBOX_TOKEN}`)
+      .then(r => r.json())
+      .then(json => {
+        const features = json.features || [];
+        // Pick the contour with the highest 'ele' — closest representative
+        const elevations = features.map(f => f.properties?.ele).filter(Number.isFinite);
+        if (elevations.length) {
+          const avg = elevations.reduce((a,b)=>a+b,0) / elevations.length;
+          altIn.value = Math.round(avg);
+          showToast(`Altitude estimée : ${Math.round(avg)} m`);
+        } else {
+          showToast('Altitude introuvable pour ce point');
+        }
+      })
+      .catch(() => showToast('Erreur réseau (altitude)'))
+      .finally(() => { btn.disabled = false; btn.textContent = 'Auto'; });
+  }
+
+  // Update cancelMapPickerPoint to clear elev badge
+  const _origCancelPickerPoint = cancelMapPickerPoint;
+  cancelMapPickerPoint = function() {
+    _origCancelPickerPoint();
+    mapPickerElev = null;
+    setPickerElevBadge('');
+  };
+  window.cancelMapPickerPoint = cancelMapPickerPoint;
+  window.fetchAltitudeForWaypointModal = fetchAltitudeForWaypointModal;
 
   // ── GPX Import ───────────────────────────────────────────────────
   let gpxParsedWaypoints = [];
