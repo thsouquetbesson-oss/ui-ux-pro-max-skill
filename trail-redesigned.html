@@ -1928,6 +1928,43 @@ mark.highlight{
   color:var(--muted);letter-spacing:.04em;text-transform:uppercase;
   white-space:nowrap;
 }
+/* Phase F: style switcher chips */
+.itin-map-styles{
+  display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;
+}
+.itin-map-style-chip{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
+  color:var(--muted);
+  font-family:'Inter',sans-serif;font-weight:500;font-size:.74rem;
+  padding:5px 11px;border-radius:99px;cursor:pointer;
+  transition:all .2s var(--ease-spring);letter-spacing:.02em;
+}
+.itin-map-style-chip:hover{
+  background:rgba(212,165,107,.10);
+  border-color:rgba(212,165,107,.25);
+  color:var(--gold-light);
+}
+.itin-map-style-chip.active{
+  background:linear-gradient(145deg, rgba(212,165,107,.22), rgba(212,165,107,.12));
+  border-color:rgba(212,165,107,.45);
+  color:var(--gold-light);
+  box-shadow:0 2px 8px rgba(212,165,107,.18);
+}
+/* Popup edit button */
+.wp-popup{min-width:170px;}
+.wp-popup-title{font-weight:600;color:#E0B97D;margin-bottom:4px;font-family:'Fraunces',serif;}
+.wp-popup-meta{font-size:.72rem;color:#a8b4ac;margin-bottom:8px;font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;}
+.wp-popup-actions{display:flex;gap:6px;}
+.wp-popup-btn{
+  flex:1;background:rgba(141,216,168,.12);border:1px solid rgba(141,216,168,.3);
+  color:#8DD8A8;font-family:inherit;font-weight:600;font-size:.74rem;
+  padding:5px 10px;border-radius:8px;cursor:pointer;
+  transition:background .2s;
+}
+.wp-popup-btn:hover{background:rgba(141,216,168,.2);}
+.wp-popup-btn.danger{background:rgba(229,148,108,.10);border-color:rgba(229,148,108,.3);color:#E5946C;}
+.wp-popup-btn.danger:hover{background:rgba(229,148,108,.2);}
 .itin-map-empty{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   height:160px;padding:18px;text-align:center;color:var(--muted);font-size:.85rem;
@@ -3929,6 +3966,11 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 12l4-4M3 12l4 4"/><path d="M12 3v18M12 3l-4 4M12 3l4 4"/></svg>
           </button>
         </div>
+      </div>
+      <div class="itin-map-styles" id="itin-map-styles">
+        <button class="itin-map-style-chip active" data-style="outdoors" type="button" onclick="setItinMapStyle('outdoors')">Terrain</button>
+        <button class="itin-map-style-chip" data-style="satellite" type="button" onclick="setItinMapStyle('satellite')">Satellite</button>
+        <button class="itin-map-style-chip" data-style="streets" type="button" onclick="setItinMapStyle('streets')">Plan</button>
       </div>
       <div class="itin-map-canvas" id="itin-map-canvas">
         <div class="itin-cine-overlay" id="itin-cine-overlay" hidden>
@@ -6766,10 +6808,17 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       const variant = getMarkerVariant(w.type);
       el.className = 'itin-wp-marker' + (variant ? ' ' + variant : '');
       el.textContent = String(i + 1);
-      const popup = new mapboxgl.Popup({ offset: 18, closeButton: false }).setHTML(
-        `<div style="font-weight:600;color:#E0B97D;margin-bottom:4px">${escapeHtml(w.label || 'Étape')}</div>` +
-        `<div style="font-size:.75rem;color:#a8b4ac">${escapeHtml(w.type || 'étape')} • ${Math.round(Number(w.alt)||0)} m</div>`
-      );
+      const safeId = w.id.replace(/'/g, '');
+      const popupHTML =
+        `<div class="wp-popup">` +
+          `<div class="wp-popup-title">${escapeHtml(w.label || 'Étape')}</div>` +
+          `<div class="wp-popup-meta">${escapeHtml(w.type || 'étape')} · ${Math.round(Number(w.alt)||0)} m</div>` +
+          `<div class="wp-popup-actions">` +
+            `<button class="wp-popup-btn" type="button" onclick="openWaypointModalAndCloseMapPopup('${safeId}')">Modifier</button>` +
+            `<button class="wp-popup-btn danger" type="button" onclick="deleteWaypointFromMap('${safeId}')">Suppr.</button>` +
+          `</div>` +
+        `</div>`;
+      const popup = new mapboxgl.Popup({ offset: 18, closeButton: true, anchor: 'bottom' }).setHTML(popupHTML);
       const m = new mapboxgl.Marker(el, { anchor: 'center' })
         .setLngLat([w.lng, w.lat])
         .setPopup(popup)
@@ -6958,6 +7007,67 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
 
   window.toggleItinCinematic = toggleItinCinematic;
   window.stopItinCinematic = stopItinCinematic;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE F — Map style switcher + clickable popup actions
+  // ═══════════════════════════════════════════════════════════════════
+  const MAP_STYLES = {
+    outdoors:  'mapbox://styles/mapbox/outdoors-v12',
+    satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
+    streets:   'mapbox://styles/mapbox/streets-v12'
+  };
+  let itinMapCurrentStyle = 'outdoors';
+
+  function setItinMapStyle(key) {
+    if (!MAP_STYLES[key] || key === itinMapCurrentStyle) return;
+    document.querySelectorAll('.itin-map-style-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.style === key);
+    });
+    itinMapCurrentStyle = key;
+    if (!itinMap) return;
+    // Reset loaded flag so we re-add DEM + sky + route after style load
+    itinMapLoaded = false;
+    itinMap.setStyle(MAP_STYLES[key]);
+    itinMap.once('style.load', () => {
+      // Re-add DEM terrain
+      if (!itinMap.getSource('mapbox-dem')) {
+        itinMap.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512, maxzoom: 14
+        });
+      }
+      itinMap.setTerrain({ source: 'mapbox-dem', exaggeration: 1.4 });
+      // Re-add sky (satellite has its own atmosphere but we keep ours for consistency)
+      if (key !== 'satellite' && !itinMap.getLayer('sky')) {
+        itinMap.addLayer({
+          id: 'sky', type: 'sky',
+          paint: { 'sky-type':'atmosphere', 'sky-atmosphere-sun':[0,90], 'sky-atmosphere-sun-intensity':8 }
+        });
+      }
+      itinMapLoaded = true;
+      updateItinMapData();
+    });
+  }
+
+  // Popup action handlers — close popup then act
+  function openWaypointModalAndCloseMapPopup(id) {
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove());
+    openWaypointModal(id);
+  }
+  function deleteWaypointFromMap(id) {
+    if (!confirm('Supprimer cette étape ?')) return;
+    if (itinData === null) itinData = loadItin();
+    itinData.waypoints = itinData.waypoints.filter(w => w.id !== id);
+    saveItin();
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove());
+    renderItineraire();
+    showToast('Étape supprimée');
+  }
+
+  window.setItinMapStyle = setItinMapStyle;
+  window.openWaypointModalAndCloseMapPopup = openWaypointModalAndCloseMapPopup;
+  window.deleteWaypointFromMap = deleteWaypointFromMap;
 
   // ═══════════════════════════════════════════════════════════════════
   // BUDGET — prévisionnel par catégorie + transactions réelles
