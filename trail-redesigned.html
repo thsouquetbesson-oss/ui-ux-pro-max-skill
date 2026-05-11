@@ -1872,6 +1872,54 @@ mark.highlight{
   padding:18px;margin-bottom:18px;
   box-shadow:var(--shadow-md);
 }
+.itin-map-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.itin-map-title{font-family:'Fraunces',serif;font-weight:500;font-size:1rem;color:var(--gold-light);}
+.itin-map-toolbar{display:flex;gap:6px;}
+.itin-map-tool{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);
+  color:var(--muted);width:30px;height:30px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--ease-spring);
+}
+.itin-map-tool:hover{background:rgba(212,165,107,.10);border-color:rgba(212,165,107,.3);color:var(--gold-light);}
+.itin-map-tool svg{width:16px;height:16px;}
+.itin-map-canvas{
+  width:100%;height:320px;border-radius:14px;overflow:hidden;
+  background:#0d1f16;position:relative;
+}
+.itin-map-canvas .mapboxgl-canvas{border-radius:14px;}
+.itin-map-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:160px;padding:18px;text-align:center;color:var(--muted);font-size:.85rem;
+  background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.08);
+  border-radius:14px;gap:10px;
+}
+.itin-map-empty svg{width:32px;height:32px;color:rgba(141,216,168,.45);}
+.itin-map-empty[hidden]{display:none;}
+/* Custom waypoint markers */
+.itin-wp-marker{
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,#E0B97D,#C99A5A);
+  border:2px solid #15221B;
+  box-shadow:0 4px 14px rgba(0,0,0,.5), 0 0 0 2px rgba(224,185,125,.25);
+  color:#15221B;font-weight:700;font-size:.78rem;
+  font-family:'IBM Plex Mono',monospace;cursor:pointer;
+  transition:transform .2s var(--ease-spring);
+}
+.itin-wp-marker:hover{transform:scale(1.15);}
+.itin-wp-marker.start{background:linear-gradient(145deg,#8DD8A8,#6BB888);}
+.itin-wp-marker.end{background:linear-gradient(145deg,#E5946C,#C77349);}
+.itin-wp-marker.summit{background:linear-gradient(145deg,#AD90D5,#8A6FBC);color:#fff;}
+.itin-wp-marker.bivouac{background:linear-gradient(145deg,#4F8AAE,#3A6E8E);color:#fff;}
+.mapboxgl-popup-content{
+  background:rgba(13,31,22,.95)!important;color:var(--text)!important;
+  border:1px solid rgba(212,165,107,.25)!important;border-radius:10px!important;
+  padding:10px 14px!important;font-family:'Inter',sans-serif!important;
+  font-size:.82rem!important;backdrop-filter:blur(12px);
+}
+.mapboxgl-popup-tip{border-top-color:rgba(13,31,22,.95)!important;}
+.mapboxgl-popup-close-button{color:var(--muted)!important;font-size:1.1rem!important;padding:2px 6px!important;}
 .itin-profile-header{
   display:flex;justify-content:space-between;align-items:center;
   margin-bottom:14px;
@@ -3802,8 +3850,25 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
       </div>
     </div>
 
-    <!-- 3D map container (Mapbox GL JS — wired in Phase C) -->
-    <div class="itin-map-wrap reveal" data-glow id="itin-map-wrap" hidden></div>
+    <!-- 3D Mapbox terrain map -->
+    <div class="itin-map-wrap reveal" data-glow id="itin-map-wrap" hidden>
+      <div class="itin-map-header">
+        <div class="itin-map-title">Carte 3D</div>
+        <div class="itin-map-toolbar">
+          <button class="itin-map-tool" type="button" id="itin-map-fit" onclick="fitItinMapToWaypoints()" aria-label="Recentrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V3h4M21 7V3h-4M3 17v4h4M21 17v4h-4"/></svg>
+          </button>
+          <button class="itin-map-tool" type="button" id="itin-map-pitch" onclick="toggleItinMapPitch()" aria-label="Basculer 2D/3D">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 12l4-4M3 12l4 4"/><path d="M12 3v18M12 3l-4 4M12 3l4 4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="itin-map-canvas" id="itin-map-canvas"></div>
+      <div class="itin-map-empty" id="itin-map-empty" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/></svg>
+        <span>Ajoute des étapes avec coordonnées GPS pour les voir sur la carte 3D.</span>
+      </div>
+    </div>
 
     <!-- Profil altitude SVG -->
     <div class="itin-profile reveal" data-glow>
@@ -6032,6 +6097,7 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
 
     renderAltitudeProfile(s.ordered);
     renderWaypointsList(s.ordered);
+    if (typeof initItinMap === 'function') initItinMap();
   }
 
   function renderAltitudeProfile(wps) {
@@ -6395,6 +6461,196 @@ html.intro-locked body{position:relative;width:100%;overflow-x:clip;}
   window.triggerGpxImport = triggerGpxImport;
   window.closeGpxPreview = closeGpxPreview;
   window.confirmGpxImport = confirmGpxImport;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE C — CARTE 3D MAPBOX (terrain réel + tracé + marqueurs)
+  // ═══════════════════════════════════════════════════════════════════
+  let itinMap = null;
+  let itinMapMarkers = [];
+  let itinMapLoaded = false;
+  let itinMapPitch3D = true;
+
+  function getMarkerVariant(type) {
+    switch ((type || 'étape').toLowerCase()) {
+      case 'départ': case 'depart': return 'start';
+      case 'arrivée': case 'arrivee': return 'end';
+      case 'sommet': return 'summit';
+      case 'bivouac': return 'bivouac';
+      default: return '';
+    }
+  }
+
+  function geoWaypoints() {
+    if (!itinData) return [];
+    return itinData.waypoints.filter(w => Number.isFinite(w.lat) && Number.isFinite(w.lng));
+  }
+
+  function computeBounds(wps, mapboxgl) {
+    const b = new mapboxgl.LngLatBounds();
+    wps.forEach(w => b.extend([w.lng, w.lat]));
+    return b;
+  }
+
+  function initItinMap() {
+    const wrap = document.getElementById('itin-map-wrap');
+    const emptyHint = document.getElementById('itin-map-empty');
+    const canvas = document.getElementById('itin-map-canvas');
+    const wps = geoWaypoints();
+
+    if (wps.length === 0) {
+      wrap.hidden = false;
+      canvas.style.display = 'none';
+      emptyHint.hidden = false;
+      return;
+    }
+    wrap.hidden = false;
+    canvas.style.display = '';
+    emptyHint.hidden = true;
+
+    loadMapboxSDK().then(mapboxgl => {
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      if (!itinMap) {
+        itinMap = new mapboxgl.Map({
+          container: 'itin-map-canvas',
+          style: 'mapbox://styles/mapbox/outdoors-v12',
+          center: [wps[0].lng, wps[0].lat],
+          zoom: 10,
+          pitch: 60,
+          bearing: -20,
+          antialias: true,
+          attributionControl: false
+        });
+        itinMap.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
+        itinMap.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+        itinMap.on('load', () => {
+          itinMapLoaded = true;
+          // 3D terrain DEM
+          if (!itinMap.getSource('mapbox-dem')) {
+            itinMap.addSource('mapbox-dem', {
+              type: 'raster-dem',
+              url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+              tileSize: 512,
+              maxzoom: 14
+            });
+          }
+          itinMap.setTerrain({ source: 'mapbox-dem', exaggeration: 1.4 });
+          // Sky atmosphere
+          if (!itinMap.getLayer('sky')) {
+            itinMap.addLayer({
+              id: 'sky',
+              type: 'sky',
+              paint: {
+                'sky-type': 'atmosphere',
+                'sky-atmosphere-sun': [0.0, 90.0],
+                'sky-atmosphere-sun-intensity': 8
+              }
+            });
+          }
+          updateItinMapData();
+        });
+      } else {
+        if (itinMapLoaded) updateItinMapData();
+        itinMap.resize();
+      }
+    }).catch(err => {
+      console.warn('Mapbox load failed:', err);
+      canvas.style.display = 'none';
+      emptyHint.hidden = false;
+      emptyHint.querySelector('span').textContent = 'Carte indisponible (connexion ?)';
+    });
+  }
+
+  function updateItinMapData() {
+    if (!itinMap || !itinMapLoaded) return;
+    const wps = geoWaypoints();
+
+    // Clear old markers
+    itinMapMarkers.forEach(m => m.remove());
+    itinMapMarkers = [];
+
+    if (wps.length === 0) return;
+
+    // Add new markers
+    const mapboxgl = window.mapboxgl;
+    wps.forEach((w, i) => {
+      const el = document.createElement('div');
+      const variant = getMarkerVariant(w.type);
+      el.className = 'itin-wp-marker' + (variant ? ' ' + variant : '');
+      el.textContent = String(i + 1);
+      const popup = new mapboxgl.Popup({ offset: 18, closeButton: false }).setHTML(
+        `<div style="font-weight:600;color:#E0B97D;margin-bottom:4px">${escapeHtml(w.label || 'Étape')}</div>` +
+        `<div style="font-size:.75rem;color:#a8b4ac">${escapeHtml(w.type || 'étape')} • ${Math.round(Number(w.alt)||0)} m</div>`
+      );
+      const m = new mapboxgl.Marker(el, { anchor: 'center' })
+        .setLngLat([w.lng, w.lat])
+        .setPopup(popup)
+        .addTo(itinMap);
+      itinMapMarkers.push(m);
+    });
+
+    // Route line GeoJSON
+    const routeGeo = {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: wps.map(w => [w.lng, w.lat]) }
+    };
+    if (itinMap.getSource('route')) {
+      itinMap.getSource('route').setData(routeGeo);
+    } else {
+      itinMap.addSource('route', { type: 'geojson', data: routeGeo });
+      itinMap.addLayer({
+        id: 'route-line-glow',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#E0B97D',
+          'line-width': 8,
+          'line-opacity': 0.25,
+          'line-blur': 4
+        }
+      });
+      itinMap.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#E0B97D',
+          'line-width': 3.5,
+          'line-opacity': 0.95
+        }
+      });
+    }
+
+    fitItinMapToWaypoints();
+  }
+
+  function fitItinMapToWaypoints() {
+    if (!itinMap || !window.mapboxgl) return;
+    const wps = geoWaypoints();
+    if (wps.length === 0) return;
+    if (wps.length === 1) {
+      itinMap.flyTo({ center: [wps[0].lng, wps[0].lat], zoom: 13, pitch: itinMapPitch3D ? 60 : 0, duration: 1200 });
+      return;
+    }
+    const bounds = computeBounds(wps, window.mapboxgl);
+    itinMap.fitBounds(bounds, {
+      padding: { top: 60, bottom: 60, left: 40, right: 40 },
+      pitch: itinMapPitch3D ? 55 : 0,
+      bearing: itinMap.getBearing(),
+      duration: 1200,
+      maxZoom: 14
+    });
+  }
+
+  function toggleItinMapPitch() {
+    if (!itinMap) return;
+    itinMapPitch3D = !itinMapPitch3D;
+    itinMap.easeTo({ pitch: itinMapPitch3D ? 60 : 0, duration: 700 });
+  }
+
+  window.fitItinMapToWaypoints = fitItinMapToWaypoints;
+  window.toggleItinMapPitch = toggleItinMapPitch;
 
   // ═══════════════════════════════════════════════════════════════════
   // BUDGET — prévisionnel par catégorie + transactions réelles
